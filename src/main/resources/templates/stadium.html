@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Sân Bóng - Phân Trang</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 80%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2em;
+            color: #4CAF50;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #e53935;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        input[type="text"], input[type="number"], input[type="url"], input[type="button"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        input[type="button"] {
+            cursor: pointer;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 10px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .pagination button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="title">Danh Sách Sân Bóng</h1>
+
+    <button class="btn btn-primary" onclick="showAddForm()">Thêm Sân Mới</button>
+    <button class="btn btn-primary" onclick="window.location.href='/admin/chart'">Thống kê số liệu</button>
+
+    <div class="form-container" id="form-container" style="display:none;">
+        <h2 id="form-title">Thêm Sân Bóng Mới</h2>
+        <div class="form-group">
+            <label for="name">Tên Sân</label>
+            <input type="text" id="name" placeholder="Tên sân bóng" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Địa Chỉ</label>
+            <input type="text" id="address" placeholder="Địa chỉ sân" required>
+        </div>
+        <div class="form-group">
+            <label for="price">Giá Thuê (VND)</label>
+            <input type="number" id="price" placeholder="Giá thuê sân" required>
+        </div>
+        <div class="form-group">
+            <label for="rating">Điểm Đánh Giá</label>
+            <input type="number" id="rating" placeholder="Điểm đánh giá (0-5)" step="0.1" min="0" max="5" required>
+        </div>
+        <div class="form-group">
+            <label for="imageUrl">URL Ảnh</label>
+            <input type="url" id="imageUrl" placeholder="URL ảnh của sân bóng" required>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="saveStadium()">Thêm Sân</button>
+        <button type="button" class="btn btn-danger" onclick="cancelForm()">Hủy</button>
+    </div>
+
+    <table id="stadiumTable" class="table">
+        <thead>
+        <tr>
+            <th>Tên Sân</th>
+            <th>Địa Chỉ</th>
+            <th>Giá Thuê</th>
+            <th>Đánh Giá</th>
+            <th>Ảnh</th>
+            <th>Hành Động</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Dữ liệu sân bóng sẽ được chèn vào đây từ JS -->
+        </tbody>
+    </table>
+
+    <div class="pagination" id="pagination">
+        <!-- Các nút phân trang sẽ được thêm vào đây -->
+    </div>
+</div>
+
+<script>
+    // Kiểm tra trạng thái đăng nhập khi trang được tải
+    document.addEventListener('DOMContentLoaded', function() {
+        checkLoginStatus();
+    });
+
+    // Kiểm tra trạng thái đăng nhập
+    function checkLoginStatus() {
+        const loginData = JSON.parse(localStorage.getItem('loginData'));
+        const currentTime = new Date().getTime();
+
+        if (loginData && loginData.expiry > currentTime) {
+            // Người dùng đã đăng nhập và chưa hết thời gian
+            loadStadiums();
+        } else {
+            // Người dùng chưa đăng nhập hoặc hết thời gian đăng nhập
+            login();
+        }
+    }
+
+    // Hàm xử lý đăng nhập
+    function login() {
+        // Dùng prompt để yêu cầu nhập tài khoản và mật khẩu
+        const username = prompt("Nhập tài khoản:");
+        const password = prompt("Nhập mật khẩu:");
+
+        // Kiểm tra tài khoản và mật khẩu
+        if (username === "admin" && password === "1") {
+            // Đăng nhập thành công
+            const expiryTime = new Date().getTime() + 60 * 60 * 1000; // Thời gian hết hạn là 1 giờ
+            const loginData = {
+                username: username,
+                expiry: expiryTime
+            };
+            localStorage.setItem('loginData', JSON.stringify(loginData));
+            alert("Đăng nhập thành công!");
+
+            // Tiến hành tải dữ liệu sân bóng
+            loadStadiums();
+        } else {
+            // Đăng nhập thất bại
+            alert("Tài khoản hoặc mật khẩu không đúng.");
+            // Sau khi đăng nhập thất bại, trang sẽ yêu cầu đăng nhập lại
+            login();
+        }
+    }
+
+
+    let stadiums = [];
+    const itemsPerPage = 5;
+    let currentPage = 1;
+    let editingStadiumId = null;
+
+    function loadStadiums() {
+        fetch('/api/stadiums/all')
+            .then(response => response.json())
+            .then(data => {
+                stadiums = data;
+                renderStadiumTable();
+                renderPagination();
+            })
+            .catch(error => console.error("Error fetching stadiums:", error));
+    }
+
+    function renderStadiumTable() {
+        const tableBody = document.querySelector('#stadiumTable tbody');
+        tableBody.innerHTML = '';
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const currentPageData = stadiums.slice(startIndex, endIndex);
+
+        currentPageData.forEach(stadium => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${stadium.name}</td>
+                <td>${stadium.address}</td>
+                <td>${stadium.price} VND</td>
+                <td>${stadium.rating}</td>
+                <td><img src="${stadium.imageUrl}" alt="Ảnh sân" style="width: 100px; height: 50px;"></td>
+                <td>
+                    <button class="btn btn-primary" onclick="showEditForm(${stadium.id})">Sửa</button>
+                    <button class="btn btn-danger" onclick="deleteStadium(${stadium.id})">Xóa</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function saveStadium() {
+        const name = document.getElementById('name').value;
+        const address = document.getElementById('address').value;
+        const price = document.getElementById('price').value;
+        const rating = document.getElementById('rating').value;
+        const imageUrl = document.getElementById('imageUrl').value;
+
+        const newStadium = { name, address, price, rating, imageUrl };
+
+        if (editingStadiumId) {
+            // Cập nhật sân bóng
+            fetch(`/api/stadiums/${editingStadiumId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newStadium)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadStadiums(); // Tải lại danh sách sân bóng
+                    cancelForm(); // Đóng form chỉnh sửa
+                })
+                .catch(error => console.error("Error updating stadium:", error));
+        } else {
+            // Thêm sân bóng mới
+            fetch('/api/stadiums', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newStadium)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadStadiums(); // Tải lại danh sách sân bóng
+                    cancelForm(); // Đóng form thêm sân
+                })
+                .catch(error => console.error("Error adding stadium:", error));
+        }
+    }
+
+
+    function deleteStadium(id) {
+        fetch(`/api/stadiums/${id}`, { method: 'DELETE' })
+            .then(() => {
+                loadStadiums();
+            })
+            .catch(error => console.error("Error deleting stadium:", error));
+    }
+
+    function showAddForm() {
+        editingStadiumId = null;
+        document.getElementById('form-title').innerText = 'Thêm Sân Bóng Mới';
+        document.getElementById('form-container').style.display = 'block';
+    }
+
+    function showEditForm(id) {
+        const stadium = stadiums.find(s => s.id === id);
+        if (stadium) {
+            document.getElementById('name').value = stadium.name;
+            document.getElementById('address').value = stadium.address;
+            document.getElementById('price').value = stadium.price;
+            document.getElementById('rating').value = stadium.rating;
+            document.getElementById('imageUrl').value = stadium.imageUrl; // Đảm bảo URL ảnh được điền vào ô nhập
+            document.getElementById('form-title').innerText = 'Chỉnh Sửa Sân Bóng';
+            document.getElementById('form-container').style.display = 'block';
+            editingStadiumId = id;
+        }
+    }
+
+
+    function cancelForm() {
+        document.getElementById('form-container').style.display = 'none';
+        document.getElementById('name').value = '';
+        document.getElementById('address').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('rating').value = '';
+        document.getElementById('imageUrl').value = '';
+        editingStadiumId = null;
+    }
+
+    function renderPagination() {
+        const paginationContainer = document.getElementById('pagination');
+        paginationContainer.innerHTML = '';
+        const totalPages = Math.ceil(stadiums.length / itemsPerPage);
+        for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement('button');
+            button.innerText = i;
+            button.onclick = () => {
+                currentPage = i;
+                renderStadiumTable();
+            };
+            paginationContainer.appendChild(button);
+        }
+    }
+
+    loadStadiums();
+</script>
+</body>
+</html>

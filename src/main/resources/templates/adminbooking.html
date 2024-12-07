@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Booking Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .booking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .booking-table th, .booking-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .booking-table th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .status-button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .status-button.completed {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .status-button.pending {
+            background-color: #ffc107;
+            color: white;
+        }
+
+        .status-button.cancelled {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .pagination {
+            text-align: center;
+        }
+
+        .pagination button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pagination button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Booking Management</h1>
+
+    <!-- Booking Table -->
+    <table class="booking-table" id="booking-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Stadium</th>
+            <th>User</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+    const bookingTable = document.getElementById('booking-table').getElementsByTagName('tbody')[0];
+    const paginationContainer = document.getElementById('pagination');
+    let currentPage = 0;
+    const pageSize = 5;
+
+    async function fetchBookings(page = 0) {
+        try {
+            const response = await fetch(`/api/admin/bookings/list?page=${page}&size=${pageSize}`);
+            const data = await response.json();
+            renderBookings(data.content);
+            setupPagination(data);
+        } catch (error) {
+            console.error("Error fetching bookings:", error);
+            bookingTable.innerHTML = "<tr><td colspan='7'>Error loading bookings</td></tr>";
+        }
+    }
+
+
+    // Render booking rows in the table
+    function renderBookings(bookings) {
+        bookingTable.innerHTML = ''; // Clear previous table content
+        bookings.forEach(booking => {
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td>${booking.id}</td>
+                <td>${booking.stadiumName}</td>
+                <td>${booking.userName}</td>
+                <td>${booking.startTime}</td>
+                <td>${booking.endTime}</td>
+                <td><button class="status-button ${booking.status.toLowerCase()}">${booking.status}</button></td>
+                <td>
+                    <button onclick="updateStatus(${booking.id}, 'COMPLETED')">Complete</button>
+                    <button onclick="updateStatus(${booking.id}, 'CANCELLED')">Cancel</button>
+                </td>
+            `;
+            bookingTable.appendChild(row);
+        });
+    }
+
+    // Set up pagination buttons
+    function setupPagination(data) {
+        paginationContainer.innerHTML = ''; // Clear previous pagination
+
+        // "Previous" button
+        const prevButton = document.createElement('button');
+        prevButton.innerText = 'Previous';
+        prevButton.disabled = data.first;
+        prevButton.onclick = () => {
+            currentPage -= 1;
+            fetchBookings(currentPage);
+        };
+        paginationContainer.appendChild(prevButton);
+
+        // "Next" button
+        const nextButton = document.createElement('button');
+        nextButton.innerText = 'Next';
+        nextButton.disabled = data.last;
+        nextButton.onclick = () => {
+            currentPage += 1;
+            fetchBookings(currentPage);
+        };
+        paginationContainer.appendChild(nextButton);
+    }
+
+    // Update booking status (Complete or Cancel)
+    async function updateStatus(id, status) {
+        try {
+            const response = await fetch(`/api/admin/bookings/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(status)
+            });
+            const data = await response.json();
+            fetchBookings(currentPage);  // Refresh the table with updated data
+        } catch (error) {
+            console.error("Error updating status:", error);
+        }
+    }
+
+    // Initialize the booking table by fetching the first page
+    fetchBookings(currentPage);
+</script>
+
+</body>
+</html>

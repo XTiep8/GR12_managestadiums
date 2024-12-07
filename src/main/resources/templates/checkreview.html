@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xem Các Đánh Giá Sân</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        h1, h2 {
+            color: #4CAF50;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        /* Header */
+        header {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        header nav {
+            display: flex;
+            gap: 20px;
+        }
+
+        header nav a {
+            color: white;
+            font-weight: bold;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+
+        header nav a:hover {
+            background: #3e8e41;
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #3e8e41;
+        }
+
+        .review {
+            background-color: #fff;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .review p {
+            margin: 5px 0;
+        }
+
+        .review hr {
+            margin: 10px 0;
+        }
+
+        .no-reviews {
+            text-align: center;
+            color: #777;
+            margin-top: 20px;
+        }
+
+        /* Footer */
+        footer {
+            background: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo">⚽ Quản lý Sân Bóng</div>
+    <nav>
+        <a href="/">Trang Chủ</a>
+        <a href="/">Danh Sách Sân</a>
+        <a href="/reviews">Hỗ Trợ</a>
+    </nav>
+</header>
+
+<main>
+    <div class="container">
+        <h2>Danh Sách Đánh Giá Của Sân</h2>
+        <label for="stadiumSelect">Chọn Sân:</label>
+        <select id="stadiumSelect"></select>
+        <button onclick="fetchReviews()">Xem Đánh Giá</button>
+        <div id="reviewsContainer"></div>
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2024 Quản lý Sân Bóng. Được phát triển bởi <a href="#">Nhóm Dev</a>.</p>
+</footer>
+
+<script>
+    // Lấy id sân từ localStorage và điền vào dropdown
+    function setStadiumFromLocalStorage() {
+        const savedStadiumId = localStorage.getItem('stadiumId');
+        if (savedStadiumId) {
+            const stadiumSelect = document.getElementById('stadiumSelect');
+            const option = document.createElement('option');
+            option.value = savedStadiumId;
+            option.textContent = `Sân ID: ${savedStadiumId}`;
+            stadiumSelect.appendChild(option);
+            stadiumSelect.disabled = true;
+            fetchReviews(); // Tự động lấy đánh giá nếu đã có sân
+        }
+    }
+
+    // Lưu sân đã chọn vào localStorage
+    document.getElementById('stadiumSelect').addEventListener('change', function () {
+        const selectedStadiumId = this.value;
+        localStorage.setItem('stadiumId', selectedStadiumId);
+    });
+
+    // Lấy đánh giá của sân đã chọn
+    function fetchReviews() {
+        const stadiumId = localStorage.getItem('stadiumId');
+        if (!stadiumId) {
+            alert("Vui lòng chọn sân!");
+            return;
+        }
+
+        fetch(`/api/v1/reviews/${stadiumId}`)
+            .then(response => response.json())
+            .then(data => {
+                const reviewsContainer = document.getElementById('reviewsContainer');
+                reviewsContainer.innerHTML = '';
+
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(review => {
+                        const reviewElement = document.createElement('div');
+                        reviewElement.classList.add('review');
+                        reviewElement.innerHTML = `
+                            <p><strong>Điểm Đánh Giá:</strong> ${review.rating}</p>
+                            <p><strong>Nhận Xét:</strong> ${review.comment}</p>
+                            <p><strong>Ngày Đánh Giá:</strong> ${review.date}</p>
+                            <hr>
+                        `;
+                        reviewsContainer.appendChild(reviewElement);
+                    });
+                } else {
+                    reviewsContainer.innerHTML = '<p class="no-reviews">Không có đánh giá nào cho sân này.</p>';
+                }
+            })
+            .catch(error => console.error('Error fetching reviews:', error));
+    }
+
+    // Gọi hàm khi trang tải
+    window.onload = setStadiumFromLocalStorage;
+</script>
+</body>
+</html>
